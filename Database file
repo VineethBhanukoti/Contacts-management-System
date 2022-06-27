@@ -20,4 +20,5 @@ CREATE TABLE CONTACTS(phone varchar(15),foreign key(phone)
 References users(phone), c_name varchar(20), baseph varchar(15),
 Primary key(phone,c_name,baseph));
 
-Add triggeres present in images suffixed with triggers
+Add triggeres present in images after this file
+
