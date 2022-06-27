@@ -1,0 +1,23 @@
+CREATE TABLE OPERATOR(op_id varchar(3) primary key,
+op_name varchar(15),
+op_cus_car_num long,
+log long);
+
+CREATE TABLE USERS(phone varchar(15) primary key,
+u_name varchar(25),
+u_location varchar(25),
+u_operator varchar(15));
+
+CREATE TABLE CALL_HIS(log_id int, from_phone varchar(15),
+Foreign key(from_phone) references users(phone) on delete NO ACTION, 
+to_phone varchar(15),foreign key(to_phone) references users(phone)on delete no action, 
+c_date date,c_time time,c_duration time,
+primary key(c_date,
+c_time,
+c_duration));
+
+CREATE TABLE CONTACTS(phone varchar(15),foreign key(phone)
+References users(phone), c_name varchar(20), baseph varchar(15),
+Primary key(phone,c_name,baseph));
+
+Add triggeres present in images suffixed with triggers
