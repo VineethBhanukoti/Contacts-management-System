@@ -1,24 +1,149 @@
-CREATE TABLE OPERATOR(op_id varchar(3) primary key,
-op_name varchar(15),
-op_cus_car_num long,
-log long);
-
-CREATE TABLE USERS(phone varchar(15) primary key,
-u_name varchar(25),
-u_location varchar(25),
-u_operator varchar(15));
-
-CREATE TABLE CALL_HIS(log_id int, from_phone varchar(15),
-Foreign key(from_phone) references users(phone) on delete NO ACTION, 
-to_phone varchar(15),foreign key(to_phone) references users(phone)on delete no action, 
+create database cms;
+use cms;
+drop table contacts;
+create table operator(op_id varchar(3) primary key,
+					  op_name varchar(15), 
+                      op_cus_car_num long,
+                      log long);
+create table users(phone varchar(15) primary key,
+				   u_name varchar(25),
+                   u_location varchar(25),
+                   u_operator varchar(15));
+create table call_his(log_id int,
+from_phone varchar(15),foreign key(from_phone) references users(phone) on delete NO ACTION,
+to_phone varchar(15),foreign key(to_phone) references users(phone)on delete no action,
 c_date date,c_time time,c_duration time,
-primary key(c_date,
-c_time,
-c_duration));
-
-CREATE TABLE CONTACTS(phone varchar(15),foreign key(phone)
-References users(phone), c_name varchar(20), baseph varchar(15),
+primary key(c_date,c_time,c_duration));
+create table contacts(phone varchar(15),foreign key(phone) references users(phone),
+c_name varchar(20),
+baseph varchar(15),
 Primary key(phone,c_name,baseph));
 
-Add triggeres present in images after this file
+insert into operator values("VI","Vodophone Idea",180002542569,0);
+insert into operator values("BA","Bharati Airtel",180002141080,0);
+insert into operator values("BS","BSNL",180001457521,0);
+insert into operator values("JI","JIO",180025081002,0);
+DELIMITER //
+create procedure add_user(in phone varchar(15),in u_name varchar(25),in u_location varchar(25),in u_operator varchar(15))
+Begin
+	insert into users values(phone,u_name,u_location,u_operator);
+End;//
 
+create procedure add_operator(in op_name varchar(15),in op_num long)
+Begin
+	insert into operator values(op_name,op_num);
+End;//
+
+create function casts(log_i int)
+returns varchar(11) Deterministic
+return cast(log_i as char(11));//
+
+create function phone_verify(phone varchar(15))
+returns varchar(15) Deterministic
+return (select users.phone from users where users.phone = concats(phone,'+91 '));//
+drop function verify_phone;//
+create function verify_phone(phone varchar(15))
+returns int deterministic
+return(length(phone));//
+
+create trigger ph_code_add
+before insert on users
+for each row
+set new.phone = concats(new.phone,'+91 ');//
+
+create function log_i ()
+Returns int Deterministic
+return (select log from operator where op_id ='VI');//
+
+create function concats (phone varchar(10) , id varchar(4))
+Returns varchar(15) Deterministic
+return concat(id,phone);//
+
+
+create procedure add_call_his(in f_ph varchar(15), in t_ph varchar(15), in c_date date,in c_time time ,in c_duration time)
+Begin
+	update operator set log = log+1;
+	insert into call_his (log_id,from_phone,to_phone,c_date,c_time,c_duration) 
+	values(log_i(),concats(f_ph,'+91 '),concats(t_ph,'+91 '),c_date,c_time,c_duration);
+End;//
+
+create procedure add_contacts(in phone varchar(15),in c_name varchar(20),in ph varchar(15))
+Begin 
+	insert into contacts values(concats(phone,'+91 '),c_name,concats(ph,'+91 '));
+End;//
+-- drop procedure add_contacts;//
+create procedure display_contacts(in ph varchar(15))
+Begin
+	select phone,c_name from contacts where baseph = concats(ph,'+91 ') order by c_name;
+End;//
+
+create procedure display_global_repo()
+Begin
+	select phone,u_name from users order by u_name;
+End;//
+drop procedure display_call_log;//
+create procedure find_contact(in nam varchar(25))
+Begin
+	select phone,u_name from users where u_name Like concats(concats('%',nam),'%') order by u_name;
+End;//
+
+create procedure display_call_log(in phone varchar(15))
+Begin 
+	select u_name,to_phone,c_date,c_time,c_duration 
+    from call_his,users where from_phone = concats(phone,'+91 ') and users.phone = concats(phone,'+91 ') 
+    order by c_date,c_time,c_duration;
+End;//
+
+create procedure dis_spec_call_log(in f_p varchar(15),in t_p varchar(15))
+Begin 
+	select * 
+    from call_his 
+    where from_phone = concats(f_p,'+91 ') and to_phone = concats(t_p,'+91 ') 
+    order by c_date,c_time,c_duration;
+End;//
+-- drop procedure dis_spec_call_log;//
+
+create procedure updat_oper(in n varchar(15),in ph varchar(15))
+Begin
+	update users set u_operator = n where phone = concats(ph,'+91 '); 
+End;//
+-- drop trigger users_check2;//
+create trigger users_check2 after update on users
+for each row
+begin
+    declare msg varchar(128);
+    if not exists(select op_name from operator where op_name=new.u_operator) then
+        set msg = concat('Trying to Enter a non Registered Operator: ', new.u_operator);
+        signal sqlstate '45000' set message_text = msg;
+    end if;
+End;//
+
+create trigger users_check after insert on users
+for each row
+begin
+    declare msg varchar(128);
+    if not exists(select op_name from operator where op_name=new.u_operator) then
+        set msg = concat('Trying to Enter a non Registered Operator: ', new.u_operator);
+        signal sqlstate '45000' set message_text = msg;
+    end if;
+    if length(new.phone)!=14 then
+        set msg = concat('Trying to Enter a Invalid Phone Number: ', new.phone);
+        signal sqlstate '45000' set message_text = msg;
+    end if;
+end;//
+
+create trigger users_check_1 before insert on contacts
+for each row
+begin
+    declare msg varchar(128);
+    if exists(select phone from contacts where (phone=new.phone)) then
+        set msg = concat('Contact already saved: ', new.phone);
+        signal sqlstate '45000' set message_text = msg;
+    end if;
+    if exists(Select c_name from contacts where c_name = new.c_name) then
+		set msg = concat('Contact already saved: ', new.c_name);
+        signal sqlstate '45000' set message_text = msg;
+	end if;
+end;//
+DELIMITER ;
+commit;
